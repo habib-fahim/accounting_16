@@ -17,14 +17,20 @@ class AccountFinancialReport(models.Model):
                 level = report.parent_id.level + 1
             report.level = level
 
-    def _get_children_by_order(self):
-        '''returns a recordset of all the children computed recursively, and sorted by sequence. Ready for the printing'''
-        res = self
-        children = self.search([('parent_id', 'in', self.ids)], order='sequence ASC')
-        if children:
-            for child in children:
-                res += child._get_children_by_order()
-        return res
+def _get_children_by_order(self, visited=None):
+    '''Returns a recordset of all the children computed recursively, and sorted by sequence.'''
+    if visited is None:
+        visited = set()
+
+    res = self
+    children = self.search([('parent_id', 'in', self.ids)], order='sequence ASC')
+
+    for child in children:
+        if child.id not in visited:  # Prevent infinite recursion
+            visited.add(child.id)
+            res += child._get_children_by_order(visited)
+
+    return res
 
     name = fields.Char('Report Name', required=True, translate=True)
     parent_id = fields.Many2one('account.financial.report', 'Parent')
